@@ -1,5 +1,6 @@
 export const WALLS = (width, height) => {
     const W = 20;
+    const marginBottom = 100;
     const cS = "#000";
     const cE = "#777";
 
@@ -15,18 +16,20 @@ export const WALLS = (width, height) => {
             ],
             grad: { x1: "0.5", y1: "0", x2: "0.5", y2: "1" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
             renderType: "polygon",
             polygon: [
-                [W, height - W],
-                [width - W, height - W],
-                [width - W, height],
-                [W, height],
+                [W, height - marginBottom - W],
+                [width - W, height - marginBottom - W],
+                [width - W, height - marginBottom],
+                [W, height - marginBottom],
             ],
             grad: { x1: "0.5", y1: "1", x2: "0.5", y2: "0" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
@@ -34,11 +37,12 @@ export const WALLS = (width, height) => {
             polygon: [
                 [0, W],
                 [W, W],
-                [W, height - W],
-                [0, height - W],
+                [W, height - marginBottom - W],
+                [0, height - marginBottom - W],
             ],
             grad: { x1: "0", y1: "0.5", x2: "1", y2: "0.5" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
@@ -46,11 +50,12 @@ export const WALLS = (width, height) => {
             polygon: [
                 [width - W, W],
                 [width, W],
-                [width, height - W],
-                [width - W, height - W],
+                [width, height - marginBottom - W],
+                [width - W, height - marginBottom - W],
             ],
             grad: { x1: "1", y1: "0.5", x2: "0", y2: "0.5" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
@@ -63,6 +68,7 @@ export const WALLS = (width, height) => {
             ],
             grad: { x1: "0.5", y1: "0.5", x2: "1", y2: "1" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
@@ -75,30 +81,33 @@ export const WALLS = (width, height) => {
             ],
             grad: { x1: "0.5", y1: "0.5", x2: "0", y2: "1" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
             renderType: "polygon",
             polygon: [
-                [0, height - W],
-                [W, height - W],
-                [W, height],
-                [0, height],
+                [0, height - marginBottom - W],
+                [W, height - marginBottom - W],
+                [W, height - marginBottom],
+                [0, height - marginBottom],
             ],
             grad: { x1: "0.5", y1: "0.5", x2: "1", y2: "0" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
         {
             type: "wall",
             renderType: "polygon",
             polygon: [
-                [width - W, height - W],
-                [width, height - W],
-                [width, height],
-                [width - W, height],
+                [width - W, height - marginBottom - W],
+                [width, height - marginBottom - W],
+                [width, height - marginBottom],
+                [width - W, height - marginBottom],
             ],
             grad: { x1: "0.5", y1: "0.5", x2: "0", y2: "0" },
             colors: { start: cS, end: cE },
+            isBuiltin: true,
         },
     ];
 };
