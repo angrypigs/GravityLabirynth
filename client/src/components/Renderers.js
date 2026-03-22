@@ -9,29 +9,47 @@ import Svg, {
 } from "react-native-svg";
 
 export const BallRenderer = (props) => {
-    const { position, circleRadius } = props.body;
+    const { body, colors, offsets, grad } = props;
+    const { position, circleRadius, id } = body;
+    const gradId = `grad_${id}`;
+
+    const cx = grad?.cx || "35%";
+    const cy = grad?.cy || "35%";
+    const rx = grad?.rx || "50%";
+    const ry = grad?.ry || "50%";
+    const fx = grad?.fx || "35%";
+    const fy = grad?.fy || "35%";
+
+    const cStart = colors?.start || "#ff9999";
+    const cMid = colors?.mid || "#ff0000";
+    const cEnd = colors?.end || "#660000";
+
+    const oStart = offsets?.start || "0%";
+    const oMid = offsets?.mid || "40%";
+    const oEnd = offsets?.end || "100%";
+
     return (
         <Svg height="100%" width="100%" style={{ position: "absolute" }}>
             <Defs>
                 <RadialGradient
-                    id="ballGrad"
-                    cx="35%"
-                    cy="35%"
-                    rx="50%"
-                    ry="50%"
-                    fx="35%"
-                    fy="35%"
+                    id={gradId}
+                    cx={cx}
+                    cy={cy}
+                    rx={rx}
+                    ry={ry}
+                    fx={fx}
+                    fy={fy}
                 >
-                    <Stop offset="0%" stopColor="#ff9999" />
-                    <Stop offset="40%" stopColor="#ff0000" />
-                    <Stop offset="100%" stopColor="#660000" />
+                    <Stop offset={oStart} stopColor={cStart} />
+                    <Stop offset={oMid} stopColor={cMid} />
+                    <Stop offset={oEnd} stopColor={cEnd} />
                 </RadialGradient>
             </Defs>
             <Circle
                 cx={position.x}
                 cy={position.y}
                 r={circleRadius}
-                fill="url(#ballGrad)"
+                fill={`url(#${gradId})`}
             />
         </Svg>
     );

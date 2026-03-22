@@ -5,7 +5,7 @@ import { GameEngine } from "react-native-game-engine";
 import Matter from "matter-js";
 import { BallRenderer, PolygonRenderer } from "../components/Renderers";
 import { PhysicsSystem } from "../systems/Physics";
-import { WALLS } from "../utils/wallData";
+import { BALL, GOAL, WALLS, HOLE, FAN } from "../utils/objectsData";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function GameScreen() {
@@ -54,43 +54,65 @@ export default function GameScreen() {
         Matter.World.add(world, [ball]);
 
         const currentLevelData = [
+            GOAL(width - 200, height - 200),
+            HOLE(100, 100),
+            HOLE(100, 150),
+            HOLE(100, 200),
+            HOLE(100, 250),
+            HOLE(100, 300),
+            HOLE(100, 350),
+            BALL(width / 2, 150),
             ...WALLS(width, height),
-            {
-                type: "fan",
-                renderType: "polygon",
-                polygon: [
-                    [100, 100],
-                    [250, 150],
-                    [230, 250],
-                    [80, 200],
-                ],
-                grad: { x1: "0.5", y1: "0.5", x2: "1", y2: "1" },
-                colors: {
-                    start: "rgba(180, 52, 219, 0.7)",
-                    end: "rgba(0, 0, 0, 0.1)",
-                },
-            },
+            FAN(400, 600),
         ];
 
         let setupEntities = {
-            physics: { engine, world },
-            ball: { body: ball, renderer: BallRenderer },
+            physics: { engine, world, offsetY: insets.top },
         };
 
         currentLevelData.forEach((obj, index) => {
+            const isBuiltin = obj.isBuiltin || false;
             let body;
-            if (obj.renderType === "polygon") {
+
+            if (obj.type === "ball") {
+                body = Matter.Bodies.circle(
+                    obj.position[0],
+                    obj.position[1],
+                    obj.radius,
+                    {
+                        restitution: 0.6,
+                        frictionAir: 0.02,
+                        label: obj.type,
+                        isBuiltin: isBuiltin,
+                    },
+                );
+
+                Matter.World.add(world, [body]);
+                setupEntities.ball = {
+                    body: body,
+                    renderer: BallRenderer,
+                    colors: obj.colors,
+                    offsets: obj.offsets,
+                    grad: obj.grad,
+                    type: obj.type,
+                };
+            } else if (obj.renderType === "polygon") {
                 const vertices = obj.polygon.map((p) => ({ x: p[0], y: p[1] }));
                 const sortedVertices = Matter.Vertices.clockwiseSort(vertices);
-                const centre = Matter.Vertices.centre(sortedVertices);
+                const centreX =
+                    vertices.reduce((sum, v) => sum + v.x, 0) / vertices.length;
+                const centreY =
+                    vertices.reduce((sum, v) => sum + v.y, 0) / vertices.length;
+
                 body = Matter.Bodies.fromVertices(
-                    centre.x,
-                    centre.y,
+                    centreX,
+                    centreY,
                     [sortedVertices],
                     {
                         isStatic: true,
-                        isSensor: obj.type === "fan" || obj.type === "goal",
+                        isSensor: obj.type === "fan",
                         label: obj.type,
+                        isBuiltin: isBuiltin,
                     },
                 );
             } else if (obj.renderType === "circle") {
@@ -100,13 +122,17 @@ export default function GameScreen() {
                     obj.radius,
                     {
                         isStatic: true,
-                        isSensor: obj.type === "fan" || obj.type === "goal",
+                        isSensor:
+                            obj.type === "fan" ||
+                            obj.type === "goal" ||
+                            obj.type === "hole",
                         label: obj.type,
+                        isBuiltin: isBuiltin,
                     },
                 );
             }
 
-            if (body) {
+            if (body && obj.type !== "ball") {
                 Matter.World.add(world, [body]);
                 setupEntities[`obj_${index}`] = {
                     body: body,
@@ -116,6 +142,7 @@ export default function GameScreen() {
                     type: obj.type,
                     isFan: obj.type === "fan",
                     isGoal: obj.type === "goal",
+                    isHole: obj.type === "hole",
                 };
             }
         });
@@ -159,7 +186,11 @@ export default function GameScreen() {
                 <GameEngine
                     systems={[PhysicsSystem]}
                     entities={entities}
-                    style={styles.gameContainer}
+                    onEvent={(e) => {
+                        if (e.type === "goalReached") {
+                            alert("Kula jest w mecie!");
+                        }
+                    }}
                 />
             </Pressable>
             <View

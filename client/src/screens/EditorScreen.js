@@ -4,7 +4,7 @@ import { GameEngine } from "react-native-game-engine";
 import Matter from "matter-js";
 import { BallRenderer, PolygonRenderer } from "../components/Renderers";
 import { EditorSystem } from "../systems/Editor";
-import { WALLS } from "../utils/wallData";
+import { WALLS } from "../utils/objectsData";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EditorScreen() {
@@ -131,7 +131,7 @@ export default function EditorScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#5a93cd" },
+    container: { flex: 1, backgroundColor: "#d5be73" },
     gameContainer: { flex: 1 },
     footer: {
         width: "100%",
