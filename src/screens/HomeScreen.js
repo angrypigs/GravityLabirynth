@@ -28,5 +28,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#5a93cd",
         justifyContent: "center",
         padding: "20%",
+        gap: 30,
     },
 });

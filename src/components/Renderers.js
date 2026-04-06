@@ -50,6 +50,8 @@ export const BallRenderer = (props) => {
                 cy={position.y}
                 r={circleRadius}
                 fill={`url(#${gradId})`}
+                stroke="#00ff00"
+                strokeWidth="2"
             />
         </Svg>
     );
@@ -76,7 +78,12 @@ export const PolygonRenderer = (props) => {
                     <Stop offset="100%" stopColor={endColor} />
                 </LinearGradient>
             </Defs>
-            <Polygon points={points} fill={`url(#${gradId})`} />
+            <Polygon
+                points={points}
+                fill={`url(#${gradId})`}
+                stroke="#00ff00"
+                strokeWidth="2"
+            />
         </Svg>
     );
 };

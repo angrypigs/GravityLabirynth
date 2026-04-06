@@ -6,6 +6,7 @@ import { BallRenderer, PolygonRenderer } from "../components/Renderers";
 import { EditorSystem } from "../systems/Editor";
 import { WALLS } from "../utils/objectsData";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { createEntity } from "../utils/entityCreator";
 
 export default function EditorScreen() {
     const insets = useSafeAreaInsets();
@@ -55,46 +56,12 @@ export default function EditorScreen() {
         };
 
         currentLevelData.forEach((obj, index) => {
-            let body;
-            if (obj.renderType === "polygon") {
-                const vertices = obj.polygon.map((p) => ({ x: p[0], y: p[1] }));
-                const sortedVertices = Matter.Vertices.clockwiseSort(vertices);
-                const centre = Matter.Vertices.centre(sortedVertices);
-                body = Matter.Bodies.fromVertices(
-                    centre.x,
-                    centre.y,
-                    [sortedVertices],
-                    {
-                        isStatic: true,
-                        isSensor: obj.type === "fan" || obj.type === "goal",
-                        label: obj.type,
-                        isBuiltin: obj.isBuiltin,
-                    },
-                );
-            } else if (obj.renderType === "circle") {
-                body = Matter.Bodies.circle(
-                    obj.position[0],
-                    obj.position[1],
-                    obj.radius,
-                    {
-                        isStatic: true,
-                        isSensor: obj.type === "fan" || obj.type === "goal",
-                        label: obj.type,
-                    },
-                );
-            }
+            const entityData = createEntity(world, obj);
 
-            if (body) {
-                Matter.World.add(world, [body]);
-                setupEntities[`obj_${index}`] = {
-                    body: body,
-                    renderer: PolygonRenderer,
-                    grad: obj.grad,
-                    colors: obj.colors,
-                    type: obj.type,
-                    isFan: obj.type === "fan",
-                    isGoal: obj.type === "goal",
-                };
+            if (obj.type === "ball") {
+                setupEntities.ball = entityData;
+            } else {
+                setupEntities[`obj_${index}`] = entityData;
             }
         });
 
