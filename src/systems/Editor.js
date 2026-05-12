@@ -1,54 +1,57 @@
 import Matter from "matter-js";
 
-export const EditorSystem = (entities, { touches }) => {
-    const start = touches.find((t) => t.type === "start");
-    const move = touches.find((t) => t.type === "move");
-    const end = touches.find((t) => t.type === "end");
+export const EditorSystem = (entities, { touches, dispatch }) => {
+    const engine = entities.physics.engine;
 
-    const physics = entities.physics;
-    const world = physics.world;
-    const offsetY = physics.offsetY || 0;
+    const startTouch = touches.find((t) => t.type === "start");
+    if (startTouch) {
+        const touchPos = {
+            x: startTouch.event.pageX,
+            y: startTouch.event.pageY - entities.physics.offsetY,
+        };
 
-    if (start) {
-        const bodies = Matter.Composite.allBodies(world);
-        const touchX = start.event.pageX;
-        const touchY = start.event.pageY - offsetY;
+        const bodies = Object.keys(entities)
+            .filter((key) => entities[key].body && !entities[key].isBuiltin)
+            .map((key) => entities[key].body);
 
-        const editableBodies = bodies.filter((b) => !b.isBuiltin);
-        let closestBody = null;
-        let minDistance = 60;
+        const hit = Matter.Query.point(bodies, touchPos);
 
-        editableBodies.forEach((body) => {
-            const dist = Matter.Vector.magnitude(
-                Matter.Vector.sub(body.position, { x: touchX, y: touchY }),
-            );
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestBody = body;
-            }
-        });
-
-        if (closestBody) {
-            physics.selected = closestBody;
+        if (hit.length > 0) {
+            const activeBody = hit[0];
+            entities.physics.activeId = activeBody.id;
+            entities.physics.dragOffset = {
+                x: activeBody.position.x - touchPos.x,
+                y: activeBody.position.y - touchPos.y,
+            };
+            dispatch({ type: "select", id: activeBody.id });
+        } else {
+            entities.physics.activeId = null;
+            dispatch({ type: "select", id: null });
         }
     }
 
-    if (move && physics.selected) {
-        const touchX = move.event.pageX;
-        const touchY = move.event.pageY - offsetY;
+    const moveTouch = touches.find((t) => t.type === "move");
+    if (moveTouch && entities.physics.activeId) {
+        const activeEntityKey = Object.keys(entities).find(
+            (key) =>
+                entities[key].body &&
+                entities[key].body.id === entities.physics.activeId,
+        );
 
-        Matter.Body.setPosition(physics.selected, {
-            x: touchX,
-            y: touchY,
-        });
-        Matter.Body.setVelocity(physics.selected, { x: 0, y: 0 });
+        if (activeEntityKey) {
+            const touchPos = {
+                x: moveTouch.event.pageX,
+                y: moveTouch.event.pageY - entities.physics.offsetY,
+            };
+            const newPos = {
+                x: touchPos.x + entities.physics.dragOffset.x,
+                y: touchPos.y + entities.physics.dragOffset.y,
+            };
+
+            Matter.Body.setPosition(entities[activeEntityKey].body, newPos);
+        }
     }
 
-    if (end && physics.selected) {
-        physics.selected = null;
-    }
-
-    Matter.Engine.update(physics.engine, 16.667);
-
+    Matter.Engine.update(engine, 16.666);
     return entities;
 };

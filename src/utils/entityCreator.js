@@ -22,20 +22,29 @@ export const createEntity = (world, obj) => {
         );
         renderer = BallRenderer;
     } else if (obj.renderType === "polygon") {
-        const vertices = obj.polygon.map((p) => ({ x: p[0], y: p[1] }));
-        const sortedVertices = Matter.Vertices.clockwiseSort(vertices);
+        let vertices;
+
+        if (obj.position && obj.verticesOffsets) {
+            vertices = obj.verticesOffsets.map((p) => ({
+                x: p[0] + obj.position[0],
+                y: p[1] + obj.position[1],
+            }));
+        } else {
+            vertices = obj.polygon.map((p) => ({ x: p[0], y: p[1] }));
+        }
+
         const centreX =
             vertices.reduce((sum, v) => sum + v.x, 0) / vertices.length;
         const centreY =
             vertices.reduce((sum, v) => sum + v.y, 0) / vertices.length;
 
-        body = Matter.Bodies.fromVertices(centreX, centreY, [sortedVertices], {
+        body = Matter.Bodies.fromVertices(centreX, centreY, [vertices], {
             isStatic: true,
-            isSensor: obj.type === "fan",
-            label: obj.type,
-            isBuiltin: isBuiltin,
             friction: 0,
             frictionStatic: 0,
+            isSensor: obj.type === "wall_custom" || obj.type === "fan",
+            label: obj.type,
+            isBuiltin: isBuiltin,
         });
         renderer = PolygonRenderer;
     } else if (obj.renderType === "circle") {
@@ -60,13 +69,15 @@ export const createEntity = (world, obj) => {
         Matter.World.add(world, [body]);
     }
 
+    let zIndex = 10;
+    if (obj.isBuiltin) zIndex = 40;
+    else if (obj.type === "ball") zIndex = 30;
+    else if (obj.type === "goal") zIndex = 20;
+
     return {
         body: body,
         renderer: renderer,
-        grad: obj.grad,
-        colors: obj.colors,
-        offsets: obj.offsets,
-        type: obj.type,
+        zIndex: zIndex,
         isFan: obj.type === "fan",
         isGoal: obj.type === "goal",
         isHole: obj.type === "hole",
@@ -74,5 +85,6 @@ export const createEntity = (world, obj) => {
             obj.type === "ball"
                 ? { x: obj.position[0], y: obj.position[1] }
                 : undefined,
+        ...obj,
     };
 };

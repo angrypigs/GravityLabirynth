@@ -3,24 +3,22 @@ import Matter from "matter-js";
 export const PhysicsSystem = (entities, { time, dispatch }) => {
     const engine = entities.physics.engine;
     const ball = entities.ball.body;
-    const spawnPoint = entities.ball.spawnPoint || { x: 200, y: 50 };
+    const spawnPoint = entities.ball.spawnPoint;
 
     Object.values(entities).forEach((entity) => {
         if (entity.isFan) {
-            const collision =
-                Matter.Query.point([entity.body], ball.position).length > 0;
+            const collision = Matter.Query.point([entity.body], ball.position).length > 0;
             if (collision) {
                 Matter.Body.applyForce(
-                    ball,
-                    ball.position,
-                    entity.force || { x: 0.001, y: 0.001 },
+                    ball, 
+                    ball.position, 
+                    entity.force || { x: 0, y: -0.0015 }
                 );
             }
         }
 
         if (entity.isHole) {
-            const collision =
-                Matter.Query.point([entity.body], ball.position).length > 0;
+            const collision = Matter.Query.point([entity.body], ball.position).length > 0;
             if (collision) {
                 Matter.Body.setPosition(ball, spawnPoint);
                 Matter.Body.setVelocity(ball, { x: 0, y: 0 });
@@ -29,8 +27,7 @@ export const PhysicsSystem = (entities, { time, dispatch }) => {
         }
 
         if (entity.isGoal) {
-            const collision =
-                Matter.Query.point([entity.body], ball.position).length > 0;
+            const collision = Matter.Query.point([entity.body], ball.position).length > 0;
             if (collision) {
                 dispatch({ type: "goalReached" });
             }

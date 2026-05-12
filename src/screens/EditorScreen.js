@@ -1,19 +1,35 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+    View,
+    useWindowDimensions,
+    StyleSheet,
+    Text,
+    Pressable,
+} from "react-native";
 import { GameEngine } from "react-native-game-engine";
 import Matter from "matter-js";
-import { BallRenderer, PolygonRenderer } from "../components/Renderers";
 import { EditorSystem } from "../systems/Editor";
-import { WALLS } from "../utils/objectsData";
+import { BALL, FAN, GOAL, WALLS, HOLE, WALL } from "../utils/objectsData";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createEntity } from "../utils/entityCreator";
+import ScreenLayout from "../components/ScreenLayout";
 
 export default function EditorScreen() {
     const insets = useSafeAreaInsets();
     const { width, height } = useWindowDimensions();
     const [entities, setEntities] = useState(null);
+    const [selectedId, setSelectedId] = useState(null);
 
     const engineRef = useRef(Matter.Engine.create({ enableSleeping: false }));
+
+    const itemsList = [
+        ["FAN", "Fan"],
+        ["HOLE", "Hole"],
+        ["WALL_HORIZONTAL", "Wall (horizontal)"],
+        ["WALL_VERTICAL", "Wall (vertical)"],
+        ["WALL_RECT", "Wall (rectangle)"],
+    ];
+    const [currentItem, setCurrentItem] = useState(0);
 
     useEffect(() => {
         const engine = engineRef.current;
@@ -25,37 +41,23 @@ export default function EditorScreen() {
         Matter.World.clear(world);
         Matter.Engine.clear(engine);
 
-        const ball = Matter.Bodies.circle(width / 2, 50, 20, {
-            restitution: 0.6,
-            frictionAir: 0.02,
-        });
-        Matter.World.add(world, [ball]);
-
         const currentLevelData = [
             ...WALLS(width, height),
-            {
-                type: "fan",
-                renderType: "polygon",
-                polygon: [
-                    [100, 100],
-                    [250, 150],
-                    [230, 250],
-                    [80, 200],
-                ],
-                grad: { x1: "0.5", y1: "0.5", x2: "1", y2: "1" },
-                colors: {
-                    start: "rgba(180, 52, 219, 0.7)",
-                    end: "rgba(0, 0, 0, 0.1)",
-                },
-            },
+            ...BALL(0.25, 0.25),
+            ...GOAL(0.75, 0.75),
+            ...FAN(0.5, 0.5),
         ];
 
         let setupEntities = {
             physics: { engine, world, offsetY: insets.top },
-            ball: { body: ball, renderer: BallRenderer },
         };
 
         currentLevelData.forEach((obj, index) => {
+            if (!obj.isBuiltin && obj.position) {
+                obj.position[0] = obj.position[0] * width;
+                obj.position[1] = obj.position[1] * height;
+            }
+
             const entityData = createEntity(world, obj);
 
             if (obj.type === "ball") {
@@ -66,45 +68,181 @@ export default function EditorScreen() {
         });
 
         setEntities(setupEntities);
-    }, [width, height]);
+    }, [width, height, insets.top]);
 
-    if (!entities) return <View style={styles.container} />;
+    const addItemHandle = () => {
+        const itemName = itemsList[currentItem][0];
+        const startX = 0.5;
+        const startY = 0.5;
+
+        let objParams;
+        if (itemName === "HOLE") objParams = HOLE(startX, startY)[0];
+        else if (itemName === "WALL_HORIZONTAL") objParams = WALL(startX, startY, 150, 20)[0];
+        else if (itemName === "WALL_VERTICAL") objParams = WALL(startX, startY, 20, 150)[0];
+        else if (itemName === "WALL_RECT") objParams = WALL(startX, startY, 50, 50)[0];
+        else if (itemName === "FAN") objParams = FAN(startX, startY)[0];
+        else return;
+
+        const world = engineRef.current.world;
+
+        if (objParams.position) {
+            objParams.position[0] = objParams.position[0] * width;
+            objParams.position[1] = objParams.position[1] * height;
+        }
+
+        const entityData = createEntity(world, objParams);
+        const newId = `obj_${Date.now()}`;
+
+        entities[newId] = entityData;
+        entities.physics.activeId = entityData.body.id;
+
+        setSelectedId(entityData.body.id);
+    };
+
+    const engineEventHandle = (e) => {
+        if (e.type === "select") {
+            setSelectedId(e.id);
+        }
+        if (e.type === "delete") {
+            for (const key in entities) {
+                if (
+                    entities[key].body &&
+                    entities[key].body.id === e.id
+                ) {
+                    Matter.World.remove(
+                        engineRef.current.world,
+                        entities[key].body
+                    );
+                    delete entities[key];
+                    break;
+                }
+            }
+            if (selectedId === e.id) setSelectedId(null);
+        }
+    };
+
+    const exportLevel = () => {
+        const levelData = [];
+
+        for (const key in entities) {
+            if (key === "physics") continue;
+
+            const entity = entities[key];
+
+            if (entity.isBuiltin) continue;
+
+            const x = entity.body.position.x / width;
+            const y = entity.body.position.y / height;
+
+            const savedObj = {
+                type: entity.type,
+                renderType: entity.renderType,
+                position: [x, y],
+                isBuiltin: false,
+                colors: entity.colors,
+                grad: entity.grad,
+                offsets: entity.offsets,
+                radius: entity.radius,
+                verticesOffsets: entity.verticesOffsets,
+            };
+
+            Object.keys(savedObj).forEach(
+                (k) => savedObj[k] === undefined && delete savedObj[k]
+            );
+
+            levelData.push(savedObj);
+        }
+
+        return JSON.stringify(levelData);
+    };
+
+    if (!entities) {
+        return <View style={{ flex: 1, backgroundColor: "#d5be73" }} />;
+    }
 
     return (
-        <View
-            style={[
-                styles.container,
-                { paddingTop: insets.top, paddingBottom: insets.bottom },
-            ]}
+        <ScreenLayout
+            bgColor="#d5be73"
+            footerContent={
+                <>
+                    <View style={styles.footerLeftBox}>
+                        <Pressable
+                            style={styles.footerLeftBoxAddBtn}
+                            onPress={() =>
+                                setCurrentItem(
+                                    (prev) =>
+                                        (prev - 1 + itemsList.length) %
+                                        itemsList.length,
+                                )
+                            }
+                        >
+                            <Text style={styles.arrowText}>{"◀"}</Text>
+                        </Pressable>
+                        <Pressable style={styles.middlePressable} onPress={addItemHandle}>
+                            <Text
+                                style={styles.itemText}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit={true}
+                                minimumFontScale={0.4}
+                            >
+                                {itemsList[currentItem][1]}
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            style={styles.footerLeftBoxAddBtn}
+                            onPress={() =>
+                                setCurrentItem(
+                                    (prev) => (prev + 1) % itemsList.length,
+                                )
+                            }
+                        >
+                            <Text style={styles.arrowText}>{"▶"}</Text>
+                        </Pressable>
+                    </View>
+                </>
+            }
         >
             <GameEngine
                 systems={[EditorSystem]}
                 entities={entities}
-                style={styles.gameContainer}
+                style={{ flex: 1 }}
+                onEvent={engineEventHandle}
             />
-            <View
-                style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 0,
-                    width: width,
-                    height: insets.bottom,
-                    backgroundColor: "#000000",
-                }}
-            />
-            <View style={styles.footer}></View>
-        </View>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#d5be73" },
-    gameContainer: { flex: 1 },
-    footer: {
-        width: "100%",
-        height: 100,
-        position: "absolute",
-        bottom: 48,
-        backgroundColor: "black",
+    footerLeftBox: {
+        width: "80%",
+        height: 60,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: "#111111",
+        padding: 5,
+    },
+    footerLeftBoxAddBtn: {
+        aspectRatio: 1,
+        height: "100%",
+        backgroundColor: "#222222",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    arrowText: {
+        fontSize: 32,
+        color: "#ffffff",
+        textAlign: "center",
+    },
+    middlePressable: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 10,
+    },
+    itemText: {
+        textAlign: "center",
+        color: "#ffffff",
+        fontSize: 24,
     },
 });
